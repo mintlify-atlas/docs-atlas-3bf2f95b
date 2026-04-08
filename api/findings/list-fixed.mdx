@@ -1,0 +1,85 @@
+---
+title: "List Fixed Findings"
+description: "GET /api/v1/findings/fixed — Retrieve all vulnerabilities that have been successfully resolved."
+---
+
+## Overview
+
+Returns all findings belonging to the authenticated user where `is_fixed` is `true`. These are vulnerabilities that have been processed by the resolution service and either had a pull request created or had a local patch applied.
+
+## Endpoint
+
+```
+GET /api/v1/findings/fixed
+```
+
+## Authentication
+
+Required. Pass either a JWT token in the `Authorization` header or an API key in the `x-api-key` header.
+
+## Response
+
+### 200 OK
+
+Returns an array of finding objects. Each element represents a resolved vulnerability.
+
+<ResponseField name="id" type="string (UUID)" required>
+  Unique identifier for the finding.
+</ResponseField>
+
+<ResponseField name="title" type="string" required>
+  Short title describing the vulnerability type.
+</ResponseField>
+
+<ResponseField name="severity" type="string" required>
+  Severity level of the finding. Possible values: `critical`, `high`, `medium`, `low`, `info`.
+</ResponseField>
+
+<ResponseField name="scanner_name" type="string">
+  Name of the scanner that detected the vulnerability (e.g., `bandit`, `semgrep`, `checkov`, `pip-audit`).
+</ResponseField>
+
+<ResponseField name="file_path" type="string">
+  Relative path to the file containing the vulnerability.
+</ResponseField>
+
+<ResponseField name="line_number" type="integer">
+  Line number in the file where the vulnerability was detected.
+</ResponseField>
+
+<ResponseField name="is_fixed" type="boolean" required>
+  Always `true` for results from this endpoint.
+</ResponseField>
+
+<ResponseField name="pr_url" type="string">
+  URL of the pull request created to fix this finding, or `"local-fix-applied"` for local scans.
+</ResponseField>
+
+## Example
+
+```bash
+curl https://code-security-platform.onrender.com/api/v1/findings/fixed \
+  -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+### Example Response
+
+```json
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "scan_id": "1c8e9b2a-3d44-4f00-b1ea-abc123456789",
+    "title": "Hardcoded password detected",
+    "severity": "high",
+    "description": "A hardcoded password was found in the source code.",
+    "remediation": "Move credentials to environment variables or a secrets manager.",
+    "scanner_name": "bandit",
+    "file_path": "src/config.py",
+    "line_number": 42,
+    "cve_id": null,
+    "confidence": "HIGH",
+    "is_fixed": true,
+    "pr_url": "https://github.com/owner/repo/pull/7"
+  }
+]
+```

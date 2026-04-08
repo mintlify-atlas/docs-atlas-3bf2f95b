@@ -1,0 +1,69 @@
+---
+title: "Docker Deployment"
+description: "Run the Code Security Platform locally or in production using Docker Compose."
+---
+
+The platform ships with a `docker-compose.yml` that starts all required services with a single command.
+
+## Quick start
+
+```bash
+docker compose up --build
+```
+
+The API is available at `http://localhost:8000` once the containers are healthy.
+
+## Services
+
+The Compose file defines four services:
+
+| Service | Image | Purpose |
+|---|---|---|
+| `api` | Built from `Dockerfile` | FastAPI application, exposed on port `8000` |
+| `worker` | Built from `Dockerfile` | RQ worker that processes scan and resolution jobs |
+| `redis` | `redis:7-alpine` | Message broker and quota counter store for the scan queue |
+| `db` | `postgres:15` | PostgreSQL database (user `svc`, database `scp`) |
+
+### api
+
+The API service runs the FastAPI application via `./entrypoint.sh` and mounts `./src` for live code reloading during development. It exposes port `8000`.
+
+### worker
+
+The worker service runs `python -m app.worker` and listens on three RQ queues: `emails`, `scans`, and `resolutions`. It depends on both `redis` and `api` being available before starting.
+
+Worker resource limits are set to **2 CPU cores** and **2 GB RAM**, with a reservation of 512 MB.
+
+A Prometheus metrics server is started on port **9100** inside the worker container (see [Observability](/deployment/observability)).
+
+<Note>
+  `REDIS_URL` must be set for the worker to start and for async scanning to function. Without it, the worker process exits immediately with an error.
+</Note>
+
+## Environment variables
+
+Set these in a `.env` file at the project root or directly in your deployment environment.
+
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URL` | Yes | SQLAlchemy connection string. Defaults to SQLite (`sqlite:////data/dev.db`) in Compose. |
+| `REDIS_URL` | Yes (for workers) | Redis connection string, e.g. `redis://redis:6379`. |
+| `SENTRY_DSN` | No | Sentry DSN for error reporting from both the API and worker processes. |
+| `WORKER_METRICS_PORT` | No | Port for the worker Prometheus metrics server. Defaults to `9100`. |
+| `SCAN_PARALLELISM` | No | Number of parallel scanner threads inside the worker. |
+
+## Synchronous mode (local dev and CI)
+
+Set `WORKER_SYNC=true` to run scan jobs synchronously in the API process, without Redis or a separate worker. This is the default mode used in tests and CI pipelines.
+
+```bash
+WORKER_SYNC=true uvicorn app.main:app --reload
+```
+
+## Health check
+
+```bash
+GET /health
+```
+
+Returns the connectivity status of the database and Redis. Returns `200` when all services are healthy, or `503` if any check fails. See [Observability](/deployment/observability) for a full response example.

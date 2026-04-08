@@ -1,0 +1,230 @@
+---
+title: "CLI Commands"
+description: "Complete reference for all scp-cli commands — scan, status, findings, resolve, and more."
+---
+
+All commands require authentication. Run `scp-cli auth --key <YOUR_API_KEY>` first. See [CLI Installation](/cli/installation) for setup instructions.
+
+---
+
+## auth
+
+Authenticate the CLI with your API key. Credentials are saved to `~/.scp/config.json`.
+
+```bash
+scp-cli auth --key <KEY> [--url <URL>]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--key` | string | required | Your SCP API key. |
+| `--url` | string | `https://code-security-platform.onrender.com` | Override the default API URL for self-hosted instances. |
+
+**Example**
+
+```bash
+scp-cli auth --key sk-abc123
+```
+
+---
+
+## scan
+
+Trigger a new security scan. Accepts either a remote repository URL or a local directory path.
+
+```bash
+scp-cli scan <repo_url|local_path> [--token <TOKEN>]
+```
+
+| Argument / Flag | Type | Default | Description |
+|-----------------|------|---------|-------------|
+| `repo_url` | string | required | Remote repository URL (e.g. `https://github.com/owner/repo`) or local path (e.g. `.`). |
+| `--token` | string | none | GitHub or GitLab personal access token for private repositories. |
+
+**Scanning a remote repository**
+
+```bash
+scp-cli scan https://github.com/owner/repo
+```
+
+For private repositories, include a personal access token:
+
+```bash
+scp-cli scan https://github.com/owner/private-repo --token ghp_yourtoken
+```
+
+**Scanning a local directory**
+
+Pass a path (`.` for the current directory). The CLI zips your workspace — excluding `.git`, `.venv`, `node_modules`, `__pycache__`, and similar directories — and uploads it for scanning.
+
+```bash
+scp-cli scan .
+```
+
+In both cases the output includes a **Scan ID**. Use it with subsequent commands to check progress and retrieve results.
+
+---
+
+## status
+
+Check the status and findings summary for a scan.
+
+```bash
+scp-cli status <scan_id>
+```
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `scan_id` | string (UUID) | The scan ID returned by `scp-cli scan`. |
+
+**Example**
+
+```bash
+scp-cli status 3f2a1b4c-0000-0000-0000-000000000000
+```
+
+The output shows the scan status and a per-scanner breakdown of finding counts.
+
+---
+
+## findings
+
+List detailed security issues for a scan, including severity, file path, and resolution status.
+
+```bash
+scp-cli findings <scan_id>
+```
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `scan_id` | string (UUID) | The scan ID to retrieve findings for. |
+
+**Example**
+
+```bash
+scp-cli findings 3f2a1b4c-0000-0000-0000-000000000000
+```
+
+The output table shows each finding's ID, severity, file path (with line number when available), and whether it has been resolved. Copy finding IDs from this output to use with `resolve` and `pr`.
+
+---
+
+## check
+
+CI/CD pipeline check: polls until the scan finishes, then reports findings at or above the specified severity threshold.
+
+```bash
+scp-cli check <scan_id> [--severity <LEVEL>] [--fail]
+```
+
+| Argument / Flag | Type | Default | Description |
+|-----------------|------|---------|-------------|
+| `scan_id` | string (UUID) | required | The scan ID to verify. |
+| `--severity` | string | `HIGH` | Minimum severity threshold to report. One of `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`. |
+| `--fail` | boolean | false | Exit with code `1` if matching open vulnerabilities are found. |
+
+**Exit codes**
+
+| Code | Condition |
+|------|-----------|
+| `0` | Scan passed — no open findings at or above the threshold, or `--fail` was not set. |
+| `1` | Open findings at or above the threshold were found **and** `--fail` was set. Also exits `1` on invalid severity or API errors. |
+
+**Examples**
+
+```bash
+# Report HIGH and above; do not fail the pipeline
+scp-cli check 3f2a1b4c-0000-0000-0000-000000000000 --severity HIGH
+
+# Fail the pipeline if any CRITICAL findings are open
+scp-cli check 3f2a1b4c-0000-0000-0000-000000000000 --severity CRITICAL --fail
+```
+
+---
+
+## resolve
+
+Trigger automated resolution for a single finding or all findings in a scan.
+
+```bash
+scp-cli resolve <id> [--token <TOKEN>]
+```
+
+| Argument / Flag | Type | Default | Description |
+|-----------------|------|---------|-------------|
+| `id` | string (UUID) | required | A **Finding ID** (to fix one issue) or a **Scan ID** (to fix all issues in that scan). |
+| `--token` | string | none | GitHub token to use when creating a pull request (if not already saved in your profile). |
+
+For remote repository scans, `resolve` generates fixes and opens a pull request, returning the PR URL. For local scans, fixes are generated and you are prompted to apply them directly to your workspace files. Backups are created automatically before any file is overwritten.
+
+**Examples**
+
+```bash
+# Resolve a single finding
+scp-cli resolve ab12cd34-0000-0000-0000-000000000000
+
+# Resolve all findings in a scan, providing a GitHub token
+scp-cli resolve 3f2a1b4c-0000-0000-0000-000000000000 --token ghp_yourtoken
+```
+
+---
+
+## resolved
+
+List all successfully resolved findings across your account.
+
+```bash
+scp-cli resolved
+```
+
+The output table shows finding IDs (truncated), scanner name, title, and severity.
+
+---
+
+## pr
+
+Get the pull request URL for a resolved finding.
+
+```bash
+scp-cli pr <finding_id>
+```
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `finding_id` | string (UUID) | The **Finding ID** of a resolved finding. This is not a Scan ID. |
+
+**Example**
+
+```bash
+scp-cli pr ab12cd34-0000-0000-0000-000000000000
+```
+
+<Note>
+  `pr` requires a Finding ID, not a Scan ID. Use `scp-cli findings <scan_id>` to get individual finding IDs. If you pass a Scan ID by mistake, the CLI will detect this and prompt you to use the correct command.
+</Note>
+
+For findings resolved from a local scan, the CLI reports that no PR was created and that fixes were applied to the local workspace instead.
+
+---
+
+## usage
+
+View your current quota usage and remaining credits.
+
+```bash
+scp-cli usage
+```
+
+The output shows scans used vs. quota limit, resolutions used vs. quota limit, and the percentage of credits remaining.
+
+---
+
+## whoami
+
+Show the current authentication status and account profile.
+
+```bash
+scp-cli whoami
+```
+
+The output displays your email address, plan tier, and superuser status.

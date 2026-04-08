@@ -1,0 +1,107 @@
+---
+title: "Usage & Quotas"
+description: "Understand how monthly scan and resolution quotas work and how to check your current usage."
+---
+
+Each plan includes a fixed number of scans and resolutions per month. Quotas are tracked separately — consuming scan quota does not affect your resolution quota, and vice versa.
+
+## How quotas work
+
+- Scan quota is consumed each time you submit a new scan via `POST /api/v1/scans`.
+- Resolution quota is consumed each time a finding is successfully resolved via `POST /api/v1/findings/{target_id}/resolve`.
+- Both counters reset at the start of each calendar month, or when you manually renew (see below).
+- Usage is tracked in real time via Redis. The daily `Usage` records in the database provide a historical view.
+
+## Checking your usage
+
+### API
+
+```bash
+curl https://code-security-platform.onrender.com/api/v1/user/usage \
+     -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+```json Response
+{
+  "usage": [
+    {
+      "date": "2026-04-08",
+      "scans_count": 1,
+      "resolutions_count": 0,
+      "billable_units": 0
+    }
+  ],
+  "scans_used": 1,
+  "resolutions_used": 0,
+  "scan_quota_limit": 2,
+  "resolve_quota_limit": 2,
+  "current_month_usage": 1,
+  "percentage_credit_left": 75.0
+}
+```
+
+### CLI
+
+```bash
+scp-cli usage
+```
+
+### Response fields
+
+<ResponseField name="scans_used" type="integer" required>
+  Number of scans consumed this month, sourced from the real-time Redis counter.
+</ResponseField>
+
+<ResponseField name="resolutions_used" type="integer" required>
+  Number of resolutions consumed this month, sourced from the real-time Redis counter.
+</ResponseField>
+
+<ResponseField name="scan_quota_limit" type="integer" required>
+  Your monthly scan allowance based on your current plan and any additive upgrades.
+</ResponseField>
+
+<ResponseField name="resolve_quota_limit" type="integer" required>
+  Your monthly resolution allowance based on your current plan and any additive upgrades.
+</ResponseField>
+
+<ResponseField name="current_month_usage" type="integer" required>
+  Total units consumed this month (`scans_used` + `resolutions_used`).
+</ResponseField>
+
+<ResponseField name="percentage_credit_left" type="number" required>
+  Percentage of your combined quota that is still available, rounded to two decimal places.
+</ResponseField>
+
+<ResponseField name="usage" type="object[]" required>
+  Daily usage history for your account, ordered newest first.
+
+  <Expandable title="properties">
+    <ResponseField name="date" type="string">
+      Calendar date (ISO 8601) for this usage record.
+    </ResponseField>
+    <ResponseField name="scans_count" type="integer">
+      Scans recorded on this day.
+    </ResponseField>
+    <ResponseField name="resolutions_count" type="integer">
+      Resolutions recorded on this day.
+    </ResponseField>
+    <ResponseField name="billable_units" type="integer">
+      Billable units accrued on this day.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## When quota is exceeded
+
+When either the scan or resolution quota is exhausted, the API returns a `403` response with a descriptive message identifying which limit was hit and indicating that an upgrade is required. No scan or resolution job is created in this case.
+
+## Manual quota renewal
+
+You can reset your monthly counters at any time without changing your plan. This is useful for one-off quota top-ups or testing.
+
+```bash
+curl -X POST "https://code-security-platform.onrender.com/api/v1/user/subscription/renew?amount=100.0" \
+     -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+The optional `amount` query parameter records the renewal amount in the billing event log (defaults to `100.0`). Both scan and resolution counters are reset to zero when the call succeeds.

@@ -1,0 +1,163 @@
+---
+title: "Get Scan"
+description: "GET /api/v1/scans/{scan_id} — Retrieve details and findings for a specific scan."
+---
+
+## Endpoint
+
+```
+GET https://code-security-platform.onrender.com/api/v1/scans/{scan_id}
+```
+
+Authentication required.
+
+## Path parameters
+
+<ParamField path="scan_id" type="string" required>
+  The UUID of the scan to retrieve.
+</ParamField>
+
+## Response
+
+### 200 — Success
+
+Returns the full scan object with all findings.
+
+<ResponseField name="id" type="string" required>
+  Unique scan identifier (UUID).
+</ResponseField>
+
+<ResponseField name="user_id" type="string" required>
+  UUID of the user who created the scan.
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  Current scan status. One of `queued`, `running`, `completed`, or `failed`.
+</ResponseField>
+
+<ResponseField name="repo_url" type="string">
+  Repository URL that was scanned. `null` for local scans.
+</ResponseField>
+
+<ResponseField name="is_local" type="boolean" required>
+  `true` if this was a local file upload scan.
+</ResponseField>
+
+<ResponseField name="created_at" type="string" required>
+  ISO 8601 timestamp of when the scan was created.
+</ResponseField>
+
+<ResponseField name="completed_at" type="string">
+  ISO 8601 timestamp of when the scan finished. `null` until completed.
+</ResponseField>
+
+<ResponseField name="risk_score" type="number">
+  Overall risk score on a 0–10 scale. `null` until the scan completes.
+</ResponseField>
+
+<ResponseField name="findings" type="array" required>
+  List of security findings for this scan.
+
+  <Expandable title="finding fields">
+    <ResponseField name="id" type="string" required>
+      Unique finding identifier (UUID).
+    </ResponseField>
+    <ResponseField name="title" type="string" required>
+      Short title describing the vulnerability.
+    </ResponseField>
+    <ResponseField name="severity" type="string" required>
+      Severity level. One of `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, or `INFO`.
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Detailed explanation of the vulnerability.
+    </ResponseField>
+    <ResponseField name="remediation" type="string">
+      Recommended steps to fix the vulnerability.
+    </ResponseField>
+    <ResponseField name="scanner_name" type="string">
+      The scanner that detected this finding (e.g. `bandit`, `semgrep`, `checkov`, `pip-audit`).
+    </ResponseField>
+    <ResponseField name="file_path" type="string">
+      Path of the file containing the vulnerability, relative to the repository root.
+    </ResponseField>
+    <ResponseField name="line_number" type="number">
+      Line number in the file where the vulnerability was detected.
+    </ResponseField>
+    <ResponseField name="cve_id" type="string">
+      CVE identifier, if applicable (e.g. `CVE-2023-12345`).
+    </ResponseField>
+    <ResponseField name="is_fixed" type="boolean" required>
+      `true` if this finding has been resolved via an automated PR.
+    </ResponseField>
+    <ResponseField name="pr_url" type="string">
+      URL of the pull request that fixed this finding. `null` until resolved.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### 403 — Forbidden
+
+Returned when the scan belongs to a different user.
+
+### 404 — Not found
+
+Returned when no scan exists with the given `scan_id`.
+
+## Example
+
+<RequestExample>
+
+```bash cURL
+curl --request GET \
+  --url https://code-security-platform.onrender.com/api/v1/scans/3fa85f64-5717-4562-b3fc-2c963f66afa6 \
+  --header 'Authorization: Bearer <JWT_TOKEN>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "repo_url": "https://github.com/owner/repo",
+  "is_local": false,
+  "zip_path": null,
+  "status": "completed",
+  "created_at": "2024-01-15T10:30:00Z",
+  "completed_at": "2024-01-15T10:32:45Z",
+  "risk_score": 7.4,
+  "findings": [
+    {
+      "id": "f1a2b3c4-d5e6-7890-abcd-ef1234567890",
+      "scan_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "title": "Hard-coded secret detected",
+      "severity": "HIGH",
+      "description": "A hard-coded API key was found in the source code.",
+      "remediation": "Move the secret to an environment variable.",
+      "scanner_name": "bandit",
+      "file_path": "src/config.py",
+      "line_number": 12,
+      "cve_id": null,
+      "confidence": "HIGH",
+      "is_fixed": false,
+      "pr_url": null
+    }
+  ]
+}
+```
+
+```json 403
+{
+  "detail": "Forbidden"
+}
+```
+
+```json 404
+{
+  "detail": "scan not found"
+}
+```
+
+</ResponseExample>

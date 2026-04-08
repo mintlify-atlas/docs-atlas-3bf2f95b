@@ -1,0 +1,155 @@
+---
+title: "Admin: Users"
+description: "Superuser endpoints for listing and managing user accounts."
+---
+
+## Overview
+
+These endpoints allow superusers to view all registered accounts and modify user attributes such as plan, quota limits, and superuser status.
+
+<Warning>
+  All endpoints in this section require a **superuser JWT token**. Requests from non-superuser accounts will be rejected with `403 Forbidden`.
+</Warning>
+
+---
+
+## GET /api/v1/admin/users
+
+Returns a list of all registered users on the platform, ordered by creation date (newest first).
+
+### Authentication
+
+Required. Superuser JWT token in the `Authorization: Bearer` header.
+
+### Response
+
+#### 200 OK
+
+Returns an array of user profile objects.
+
+<ResponseField name="id" type="string (UUID)" required>
+  Unique identifier for the user.
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  Email address of the user.
+</ResponseField>
+
+<ResponseField name="plan" type="string" required>
+  Current billing plan. One of `"starter"`, `"team"`, or `"enterprise"`.
+</ResponseField>
+
+<ResponseField name="scan_quota_per_month" type="integer" required>
+  Monthly scan allowance for this user.
+</ResponseField>
+
+<ResponseField name="resolve_quota_per_month" type="integer" required>
+  Monthly resolution allowance for this user.
+</ResponseField>
+
+<ResponseField name="is_superuser" type="boolean" required>
+  Whether the user has superuser privileges.
+</ResponseField>
+
+<ResponseField name="slack_webhook_url" type="string">
+  Configured Slack webhook URL, if any.
+</ResponseField>
+
+<ResponseField name="jira_url" type="string">
+  Configured Jira instance URL, if any.
+</ResponseField>
+
+<ResponseField name="created_at" type="string (ISO 8601 datetime)" required>
+  Account creation timestamp.
+</ResponseField>
+
+### Example
+
+```bash
+curl https://code-security-platform.onrender.com/api/v1/admin/users \
+  -H "Authorization: Bearer <SUPERUSER_JWT>"
+```
+
+```json
+[
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "email": "user@example.com",
+    "plan": "starter",
+    "scan_quota_per_month": 2,
+    "resolve_quota_per_month": 2,
+    "slack_webhook_url": null,
+    "jira_url": null,
+    "is_superuser": false,
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+]
+```
+
+---
+
+## PUT /api/v1/admin/users/{user_id}
+
+Updates a specific user's plan, quota, or superuser status. Only the fields you include in the request body are updated.
+
+### Authentication
+
+Required. Superuser JWT token in the `Authorization: Bearer` header.
+
+### Path Parameters
+
+<ParamField path="user_id" type="string (UUID)" required>
+  The UUID of the user to update.
+</ParamField>
+
+### Request Body
+
+<ParamField body="plan" type="string">
+  New billing plan for the user. Accepted values: `"starter"`, `"team"`, `"enterprise"`.
+</ParamField>
+
+<ParamField body="scan_quota_per_month" type="integer">
+  Override the user's monthly scan quota. Set to a positive integer.
+</ParamField>
+
+<ParamField body="resolve_quota_per_month" type="integer">
+  Override the user's monthly resolution quota. Set to a positive integer.
+</ParamField>
+
+<ParamField body="is_superuser" type="boolean">
+  Grant or revoke superuser privileges for this user.
+</ParamField>
+
+### Response
+
+#### 200 OK
+
+Returns the updated user profile object using the same shape as the GET /admin/users response.
+
+#### 404 Not Found
+
+```json
+{
+  "detail": "User not found"
+}
+```
+
+### Examples
+
+```bash
+# Promote a user to the Enterprise plan
+curl -X PUT https://code-security-platform.onrender.com/api/v1/admin/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Authorization: Bearer <SUPERUSER_JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{ "plan": "enterprise" }'
+
+# Grant superuser privileges and set a custom quota
+curl -X PUT https://code-security-platform.onrender.com/api/v1/admin/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Authorization: Bearer <SUPERUSER_JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "is_superuser": true,
+    "scan_quota_per_month": 1000,
+    "resolve_quota_per_month": 1000
+  }'
+```

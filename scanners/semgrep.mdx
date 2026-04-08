@@ -1,0 +1,82 @@
+---
+title: "Semgrep"
+description: "Multi-language static analysis covering OWASP Top 10 and CWE using Semgrep Registry community rules."
+---
+
+Semgrep is the first scanner to run and provides broad static analysis coverage across all supported languages in a single pass. It uses Semgrep Registry community rule packs to detect security issues mapped to OWASP Top 10 categories and Common Weakness Enumeration (CWE) identifiers.
+
+## What Semgrep detects
+
+- OWASP Top 10 vulnerabilities (injection, broken auth, XSS, insecure deserialization, etc.)
+- Secrets and credentials hardcoded in source files
+- Common security anti-patterns (use of weak crypto, unsafe deserialization, exec injection)
+- Language- and framework-specific issues (Spring, JavaScript/TypeScript async patterns, etc.)
+
+Semgrep runs with the following rule packs:
+
+| Rule pack | Coverage |
+|---|---|
+| `p/default` | General security rules |
+| `p/security-audit` | In-depth security audit rules |
+| `p/secrets` | Hardcoded secrets and credentials |
+| `p/owasp-top-ten` | OWASP Top 10 mapping |
+| `p/javascript` | JavaScript-specific rules |
+| `p/typescript` | TypeScript-specific rules |
+| `p/java` | Java-specific rules |
+| `p/spring` | Spring Framework rules |
+
+## Supported languages
+
+Semgrep is applicable to any repository containing files with these extensions:
+
+| Language | Extensions |
+|---|---|
+| Python | `.py` |
+| JavaScript | `.js`, `.jsx` |
+| TypeScript | `.ts`, `.tsx` |
+| Java | `.java` |
+| Go | `.go` |
+| Ruby | `.rb` |
+| PHP | `.php` |
+| C | `.c`, `.h` |
+| C++ | `.cpp`, `.cc`, `.cxx`, `.hpp` |
+| C# | `.cs` |
+| Rust | `.rs` |
+| Kotlin | `.kt`, `.kts` |
+| Scala | `.scala` |
+| Swift | `.swift` |
+| YAML | `.yaml`, `.yml` |
+| JSON | `.json` |
+| Terraform | `.tf` |
+| Dockerfile | `Dockerfile` |
+
+## When Semgrep runs
+
+Semgrep runs whenever the repository contains at least one file matching any of the supported extensions listed above. Because of its broad language support, Semgrep runs on nearly every repository.
+
+## Finding format
+
+Each Semgrep finding includes the following fields:
+
+```json
+{
+  "scanner_name": "semgrep",
+  "title": "Exec Used",
+  "severity": "HIGH",
+  "file_path": "src/utils/runner.py",
+  "line_number": 42,
+  "description": "Use of exec() detected. Executing arbitrary code can lead to remote code execution vulnerabilities.",
+  "remediation": "Review and fix the security issue. See: https://cwe.mitre.org/data/definitions/78.html",
+  "cve_id": "CWE-78"
+}
+```
+
+**Severity mapping**
+
+Semgrep reports severity as `ERROR`, `WARNING`, or `INFO`. The platform maps these to its three-tier severity model using both the raw severity level and the `impact` / `likelihood` fields in the rule metadata:
+
+| Semgrep level | Platform severity |
+|---|---|
+| `ERROR`, or `impact=HIGH`, or `likelihood=HIGH` | HIGH |
+| `WARNING`, or `impact=MEDIUM`, or `likelihood=MEDIUM` | MEDIUM |
+| `INFO` (none of the above) | LOW |

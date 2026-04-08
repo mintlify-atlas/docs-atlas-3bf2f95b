@@ -1,0 +1,68 @@
+---
+title: "Introduction"
+description: "Scan code repositories for security vulnerabilities and automatically generate fixes — all from your terminal or CI/CD pipeline."
+---
+
+## What is Code Security Platform?
+
+Code Security Platform is a cloud-based security vulnerability scanner that analyzes your code repositories using multiple industry-standard scanners running in parallel. When vulnerabilities are found, the platform can automatically generate and submit pull requests with fixes — directly to your GitHub repository.
+
+Whether you're a solo developer or a large engineering team, Code Security Platform helps you ship more secure code faster.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Register, get your API key, and run your first scan in under 5 minutes
+  </Card>
+  <Card title="Authentication" icon="key" href="/authentication">
+    Learn how to use JWT tokens and API keys to access the platform
+  </Card>
+  <Card title="CLI Tool" icon="terminal" href="/cli/installation">
+    Install `scp-cli` and scan repos or local workspaces from your terminal
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/scans/create">
+    Full REST API reference for integrating scans into your own tools
+  </Card>
+</CardGroup>
+
+## How it works
+
+<Steps>
+  <Step title="Submit a repository">
+    Point the platform at any public or private GitHub repository URL, or upload a local workspace as a zip file. The platform clones and prepares the code for analysis.
+  </Step>
+  <Step title="Scanners run in parallel">
+    Seven industry-standard scanners analyze your codebase concurrently — covering static analysis, dependency vulnerabilities, and infrastructure misconfigurations.
+  </Step>
+  <Step title="Review findings">
+    Each finding includes severity (LOW / MEDIUM / HIGH / CRITICAL), the affected file and line number, a description of the vulnerability, and remediation guidance.
+  </Step>
+  <Step title="Auto-resolve vulnerabilities">
+    Trigger automated resolution for any finding or an entire scan. The platform generates a fix and opens a pull request on your repository, ready for review.
+  </Step>
+</Steps>
+
+## Security scanners
+
+The platform integrates seven scanners to give you comprehensive coverage:
+
+| Scanner | What it catches |
+|---|---|
+| **Semgrep** | Multi-language static analysis — OWASP Top 10, CWE coverage, 18+ languages |
+| **Bandit** | Python-specific issues — hardcoded secrets, SQL injection, insecure crypto |
+| **Checkov** | Infrastructure as Code misconfigs — Terraform, Dockerfile, Kubernetes, CloudFormation |
+| **pip-audit** | Python dependency CVEs from the PyPI Advisory Database |
+| **npm-audit** | Node.js dependency vulnerabilities |
+| **Retire.js** | Bundled JavaScript library vulnerabilities (jQuery, etc.) |
+| **OSV Scanner** | Multi-language dependency scanning — Go, Rust, JavaScript, and more |
+
+## Plans
+
+| Plan | Monthly Scans | Monthly Resolutions |
+|---|---|---|
+| **Starter** | 2 | 2 |
+| **Team** | 500 | 500 |
+| **Enterprise** | 2,000 | 2,000 |
+
+<Card title="View Plans & Pricing" icon="credit-card" href="/billing/plans">
+  Compare plans and learn how to upgrade your account
+</Card>

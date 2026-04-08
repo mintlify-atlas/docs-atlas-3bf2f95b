@@ -1,0 +1,81 @@
+---
+title: "Checkov"
+description: "Infrastructure as Code security scanning for Terraform, Dockerfile, Kubernetes, and CloudFormation."
+---
+
+Checkov scans Infrastructure as Code (IaC) files to detect misconfigurations before they reach a deployed environment. It applies over 1,000 built-in policies mapped to industry compliance frameworks including CIS Benchmarks, PCI-DSS, and HIPAA.
+
+## What Checkov scans
+
+| Format | Files |
+|---|---|
+| Terraform | `*.tf` |
+| Dockerfile | `Dockerfile*` |
+| Kubernetes | `*.yaml`, `*.yml` |
+| CloudFormation | `*.yaml`, `*.yml`, `*.json` |
+
+<Note>
+Checkov scans the entire repository directory and automatically detects the framework type for each file. A single scan may produce findings across multiple IaC frameworks.
+</Note>
+
+## Policy coverage
+
+Checkov includes built-in policies for cloud-provider resources (AWS, Azure, GCP), Kubernetes manifests, and container images. The check ID prefix indicates the resource type:
+
+| Prefix | Scope |
+|---|---|
+| `CKV_AWS_*` | AWS resource configuration |
+| `CKV_AZURE_*` | Azure resource configuration |
+| `CKV_GCP_*` | GCP resource configuration |
+| `CKV_K8S_*` | Kubernetes manifest |
+| `CKV_DOCKER_*` | Dockerfile |
+| `CKV2_*` | Cross-provider compliance checks |
+
+Examples of what these policies catch: S3 buckets without server-side encryption, Dockerfiles running as root, Kubernetes pods with privileged containers, security groups open to `0.0.0.0/0`, and CloudFormation stacks without logging enabled.
+
+## When Checkov runs
+
+Checkov runs whenever the repository contains at least one of the following: a `*.tf` file, a `Dockerfile*` file, a `*.yaml` or `*.yml` file, or a `*.json` file.
+
+## Severity mapping
+
+Checkov reports `CRITICAL`, `HIGH`, `MEDIUM`, and `LOW` severity. The platform normalizes these to three levels:
+
+| Checkov severity | Platform severity |
+|---|---|
+| CRITICAL or HIGH | HIGH |
+| MEDIUM | MEDIUM |
+| LOW | LOW |
+| Not specified | MEDIUM |
+
+## Finding format
+
+A finding for a Dockerfile misconfiguration:
+
+```json
+{
+  "scanner_name": "checkov",
+  "title": "Ensure that HEALTHCHECK instructions have been added to container images",
+  "severity": "LOW",
+  "file_path": "Dockerfile",
+  "line_number": 1,
+  "description": "Ensure that HEALTHCHECK instructions have been added to container images\n\nGuideline: https://docs.bridgecrew.io/docs/not-relevant-check",
+  "remediation": "Review Dockerfile for security best practices",
+  "cve_id": null
+}
+```
+
+A finding for a Terraform misconfiguration:
+
+```json
+{
+  "scanner_name": "checkov",
+  "title": "Ensure S3 bucket has versioning enabled",
+  "severity": "MEDIUM",
+  "file_path": "infra/main.tf",
+  "line_number": 12,
+  "description": "S3 bucket does not have versioning enabled.",
+  "remediation": "Review AWS resource configuration for security best practices for resource: aws_s3_bucket.data",
+  "cve_id": null
+}
+```

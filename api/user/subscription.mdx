@@ -1,0 +1,113 @@
+---
+title: "Subscription"
+description: "Upgrade your plan or renew monthly quotas via the API."
+---
+
+## Overview
+
+These endpoints let you upgrade your account plan or renew your monthly usage quota without going through a billing dashboard.
+
+| Plan | Monthly Scans | Monthly Resolutions |
+|------|--------------|---------------------|
+| `starter` | 2 | 2 |
+| `team` | 500 | 500 |
+| `enterprise` | 2000 | 2000 |
+
+---
+
+## POST /api/v1/user/subscription/team
+
+Upgrades the authenticated user's account to the **Team** plan, increasing monthly scan and resolution quotas to 500 each.
+
+### Authentication
+
+Required. Pass either a JWT token in the `Authorization` header or an API key in the `x-api-key` header.
+
+### Response
+
+#### 200 OK
+
+```json
+{
+  "status": "success",
+  "message": "User user@example.com successfully subscribed to TEAM plan."
+}
+```
+
+### Example
+
+```bash
+curl -X POST https://code-security-platform.onrender.com/api/v1/user/subscription/team \
+  -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+---
+
+## POST /api/v1/user/subscription/enterprise
+
+Upgrades the authenticated user's account to the **Enterprise** plan, increasing monthly scan and resolution quotas to 2000 each.
+
+### Authentication
+
+Required. Pass either a JWT token in the `Authorization` header or an API key in the `x-api-key` header.
+
+### Response
+
+#### 200 OK
+
+```json
+{
+  "status": "success",
+  "message": "User user@example.com successfully subscribed to ENTERPRISE plan."
+}
+```
+
+### Example
+
+```bash
+curl -X POST https://code-security-platform.onrender.com/api/v1/user/subscription/enterprise \
+  -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+---
+
+## POST /api/v1/user/subscription/renew
+
+Resets the authenticated user's monthly usage quota. Useful when you need to top-up remaining credits mid-cycle or after a quota has been exhausted.
+
+### Authentication
+
+Required. Pass either a JWT token in the `Authorization` header or an API key in the `x-api-key` header.
+
+### Query Parameters
+
+<ParamField query="amount" type="number" default="100.0">
+  The number of quota units to add during renewal. Defaults to `100.0` if not specified.
+</ParamField>
+
+<Note>
+  The `amount` parameter is optional. If omitted, the renewal defaults to `100.0` quota units. Pass a custom value to renew a different quantity, e.g., `?amount=500.0`.
+</Note>
+
+### Response
+
+#### 200 OK
+
+```json
+{
+  "status": "success",
+  "message": "Monthly quota renewed for user user@example.com"
+}
+```
+
+### Example
+
+```bash
+# Renew with default amount (100.0)
+curl -X POST https://code-security-platform.onrender.com/api/v1/user/subscription/renew \
+  -H "Authorization: Bearer <JWT_TOKEN>"
+
+# Renew with a custom amount
+curl -X POST "https://code-security-platform.onrender.com/api/v1/user/subscription/renew?amount=500.0" \
+  -H "Authorization: Bearer <JWT_TOKEN>"
+```

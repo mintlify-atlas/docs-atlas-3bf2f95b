@@ -1,0 +1,115 @@
+---
+title: "CI/CD Integration"
+description: "Add automated security scanning to your GitHub Actions, GitLab CI, or other CI/CD pipelines using scp-cli."
+---
+
+The `scp-cli check` command is purpose-built for CI/CD pipelines. It polls the platform until a scan finishes, evaluates findings against a configurable severity threshold, and exits with a non-zero code when the build should be blocked — giving you a clean pass/fail signal that integrates with any pipeline.
+
+## How `check` works in CI
+
+```bash
+scp-cli check <scan_id> --severity <LEVEL> --fail
+```
+
+- Polls the scan until its status is `completed`, `failed`, or `error`.
+- Filters findings to those at or above `--severity` that are still open (not resolved).
+- Exits `0` if no matching findings exist.
+- Exits `1` if matching findings exist **and** `--fail` is set, failing the pipeline step.
+
+**Severity levels** (lowest to highest): `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`
+
+<Note>
+  Without `--fail`, `check` always exits `0` even when vulnerabilities are found. It will print a warning but will not block the pipeline. Add `--fail` to enforce a hard gate.
+</Note>
+
+## GitHub Actions workflow
+
+The following workflow installs `scp-cli`, authenticates, scans the current repository, and fails the job if any `HIGH` or higher severity vulnerabilities are found.
+
+<Tip>
+  Store your API key as a GitHub Actions secret named `SCP_API_KEY`. Never hard-code credentials in workflow files. Go to **Settings → Secrets and variables → Actions → New repository secret** to add it.
+</Tip>
+
+```yaml .github/workflows/security-scan.yml
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install scp-cli
+        run: pip install scp-cli --upgrade
+
+      - name: Authenticate
+        run: scp-cli auth --key ${{ secrets.SCP_API_KEY }}
+
+      - name: Scan workspace
+        id: scan
+        run: |
+          # Scan the checked-out workspace (current directory)
+          OUTPUT=$(scp-cli scan .)
+          echo "$OUTPUT"
+          SCAN_ID=$(echo "$OUTPUT" | grep -oP '(?<=Scan ID: )\S+')
+          echo "scan_id=$SCAN_ID" >> $GITHUB_OUTPUT
+
+      - name: Wait for results and check
+        run: |
+          scp-cli check ${{ steps.scan.outputs.scan_id }} --severity HIGH --fail
+```
+
+<Note>
+  The `scan .` command zips the current working directory (excluding `.git`, `.venv`, `node_modules`, `__pycache__`, and similar) and uploads it for scanning. This is the recommended approach for CI environments where the repository is checked out locally.
+</Note>
+
+## Exit code reference
+
+| Exit code | Meaning |
+|-----------|---------|
+| `0` | Scan passed — no open findings at or above the threshold, or `--fail` was not set. |
+| `1` | Open findings at or above the threshold were found and `--fail` was set, or an API/authentication error occurred. |
+
+## Adjusting the severity threshold
+
+Change `--severity` to control which findings block the build:
+
+```bash
+# Block only on CRITICAL findings
+scp-cli check <scan_id> --severity CRITICAL --fail
+
+# Block on MEDIUM and above
+scp-cli check <scan_id> --severity MEDIUM --fail
+
+# Report all severities but never block
+scp-cli check <scan_id> --severity LOW
+```
+
+## GitLab CI example
+
+```yaml .gitlab-ci.yml
+security-scan:
+  image: python:3.11-slim
+  stage: test
+  script:
+    - pip install scp-cli --upgrade
+    - scp-cli auth --key $SCP_API_KEY
+    - |
+      OUTPUT=$(scp-cli scan .)
+      SCAN_ID=$(echo "$OUTPUT" | grep -oP '(?<=Scan ID: )\S+')
+      scp-cli check "$SCAN_ID" --severity HIGH --fail
+```
+
+Store `SCP_API_KEY` as a [GitLab CI/CD variable](https://docs.gitlab.com/ee/ci/variables/) with the **Masked** option enabled.

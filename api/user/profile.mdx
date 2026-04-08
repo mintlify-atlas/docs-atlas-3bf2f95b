@@ -1,0 +1,161 @@
+---
+title: "User Profile"
+description: "GET and PUT /api/v1/user/profile — View and update your account profile and integration settings."
+---
+
+## Overview
+
+The profile endpoint lets you inspect your current plan, quota limits, and integration settings, and update integration tokens or webhook URLs.
+
+**Protected fields** (`plan`, `is_superuser`, quota values) cannot be changed through this endpoint. Plan upgrades are handled via the [Subscription](/api/user/subscription) endpoints.
+
+---
+
+## GET /api/v1/user/profile
+
+Returns the full profile for the authenticated user.
+
+### Authentication
+
+Required. Pass either a JWT token in the `Authorization` header or an API key in the `x-api-key` header.
+
+### Response
+
+#### 200 OK
+
+<ResponseField name="id" type="string (UUID)" required>
+  Unique identifier for the user account.
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  Email address associated with the account.
+</ResponseField>
+
+<ResponseField name="plan" type="string" required>
+  The user's current billing plan. One of `"starter"`, `"team"`, or `"enterprise"`.
+</ResponseField>
+
+<ResponseField name="scan_quota_per_month" type="integer" required>
+  Number of scans the user is allowed to run per month under their current plan.
+</ResponseField>
+
+<ResponseField name="resolve_quota_per_month" type="integer" required>
+  Number of resolutions the user is allowed to perform per month.
+</ResponseField>
+
+<ResponseField name="is_active" type="boolean" required>
+  Whether the account is currently active.
+</ResponseField>
+
+<ResponseField name="is_superuser" type="boolean" required>
+  Whether the account has superuser (admin) privileges.
+</ResponseField>
+
+<ResponseField name="slack_webhook_url" type="string">
+  Configured Slack incoming webhook URL for notifications.
+</ResponseField>
+
+<ResponseField name="jira_url" type="string">
+  Configured Jira instance base URL.
+</ResponseField>
+
+<ResponseField name="created_at" type="string (ISO 8601 datetime)" required>
+  Timestamp when the account was created.
+</ResponseField>
+
+### Example
+
+```bash
+curl https://code-security-platform.onrender.com/api/v1/user/profile \
+  -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "email": "user@example.com",
+  "plan": "team",
+  "scan_quota_per_month": 500,
+  "resolve_quota_per_month": 500,
+  "slack_webhook_url": null,
+  "jira_url": null,
+  "is_superuser": false,
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+---
+
+## PUT /api/v1/user/profile
+
+Updates integration settings for the authenticated user. Only the fields listed below can be changed. All fields are optional — send only the ones you want to update.
+
+### Authentication
+
+Required. Pass either a JWT token in the `Authorization` header or an API key in the `x-api-key` header.
+
+### Request Body
+
+<ParamField body="slack_webhook_url" type="string">
+  Slack incoming webhook URL for scan and resolution notifications.
+</ParamField>
+
+<ParamField body="jira_url" type="string">
+  Base URL of your Jira instance (e.g., `https://yourorg.atlassian.net`).
+</ParamField>
+
+<ParamField body="jira_email" type="string">
+  Email address used to authenticate with the Jira API.
+</ParamField>
+
+<ParamField body="jira_api_token" type="string">
+  Jira API token for authentication.
+</ParamField>
+
+<ParamField body="jira_project_key" type="string">
+  Jira project key where issues should be created (e.g., `SEC`).
+</ParamField>
+
+<ParamField body="github_token" type="string">
+  GitHub personal access token used by the resolution service to create pull requests.
+</ParamField>
+
+<ParamField body="gitlab_token" type="string">
+  GitLab personal access token for GitLab-hosted repositories.
+</ParamField>
+
+<ParamField body="bitbucket_token" type="string">
+  Bitbucket access token for Bitbucket-hosted repositories.
+</ParamField>
+
+### Response
+
+#### 200 OK
+
+Returns the updated profile object using the same shape as the GET response.
+
+### Example
+
+```bash
+curl -X PUT https://code-security-platform.onrender.com/api/v1/user/profile \
+  -H "Authorization: Bearer <JWT_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "slack_webhook_url": "https://hooks.slack.com/services/T00/B00/xxxx",
+    "github_token": "ghp_yourPersonalAccessToken"
+  }'
+```
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "email": "user@example.com",
+  "plan": "team",
+  "scan_quota_per_month": 500,
+  "resolve_quota_per_month": 500,
+  "slack_webhook_url": "https://hooks.slack.com/services/T00/B00/xxxx",
+  "jira_url": null,
+  "is_superuser": false,
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```

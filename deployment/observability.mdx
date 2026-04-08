@@ -1,0 +1,89 @@
+---
+title: "Observability"
+description: "Monitor platform health, access Prometheus metrics, and configure error reporting."
+---
+
+The platform exposes Prometheus metrics, a health check endpoint, and optional Sentry integration for error reporting.
+
+## Health check
+
+```bash
+GET /health
+```
+
+Verifies connectivity to the database and Redis, and checks for active RQ workers on the `scans` queue. Returns `200` when all services are healthy, or `503` if any check fails.
+
+```json Example response
+{
+  "status": "ok",
+  "timestamp": 1744156800.0,
+  "services": {
+    "database": "ok",
+    "redis": "ok",
+    "workers": {
+      "count": 1,
+      "status": "ok"
+    }
+  }
+}
+```
+
+When a service is unavailable, the corresponding field contains an error string and the top-level `status` is set to `"error"`:
+
+```json Unhealthy response (503)
+{
+  "status": "error",
+  "timestamp": 1744156800.0,
+  "services": {
+    "database": "ok",
+    "redis": "error: Connection refused",
+    "workers": "unknown"
+  }
+}
+```
+
+The `workers` field reports how many RQ workers are currently registered on the `scans` queue. A value of `"no_workers_found"` means Redis is reachable but no worker processes are active.
+
+## Prometheus metrics
+
+```bash
+GET /api/v1/metrics
+```
+
+Returns metrics in Prometheus text format. No authentication is required.
+
+### API metrics
+
+The API process exposes the following scan lifecycle counters and a scan duration histogram, along with standard HTTP request counts and latencies:
+
+| Metric | Type | Description |
+|---|---|---|
+| `scp_scans_enqueued_total` | Counter | Total scans submitted to the RQ queue |
+| `scp_scans_started_total` | Counter | Total scans picked up by a worker |
+| `scp_scans_completed_total` | Counter | Total scans that completed successfully |
+| `scp_scans_failed_total` | Counter | Total scans that ended in a failed state |
+| `scp_scan_duration_seconds` | Histogram | Wall-clock time from scan start to completion |
+
+Standard `prometheus_client` HTTP and process metrics (request counts, latency buckets, CPU, memory) are also included.
+
+### Worker metrics
+
+<Note>
+  Worker Prometheus metrics are exposed on port **9100** by the worker process, separate from the API metrics endpoint. Scrape `http://<worker-host>:9100/` in your Prometheus configuration to collect them.
+</Note>
+
+The worker metrics port can be changed with the `WORKER_METRICS_PORT` environment variable. See [Docker deployment](/deployment/docker) for configuration details.
+
+## Sentry
+
+Set the `SENTRY_DSN` environment variable to enable error reporting for both the API and worker processes. When set, Sentry is initialized at startup with a `traces_sample_rate` of `0.1` (10% of transactions).
+
+```bash
+# docker-compose
+SENTRY_DSN=https://...@o0.ingest.sentry.io/... docker compose up --build
+
+# local
+SENTRY_DSN=https://...@o0.ingest.sentry.io/... uvicorn app.main:app --reload
+```
+
+Leave `SENTRY_DSN` unset or empty to disable Sentry entirely. No errors are reported and no performance overhead is added.

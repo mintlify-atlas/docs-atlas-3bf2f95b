@@ -1,0 +1,180 @@
+---
+title: "Dependency Scanning"
+description: "Detect known CVEs in Python, Node.js, JavaScript, Go, and Rust dependencies using pip-audit, npm-audit, Retire.js, and OSV Scanner."
+---
+
+The platform includes four complementary dependency scanners that together cover Python, Node.js, bundled JavaScript, Go, Rust, PHP, Ruby, Java, and more. Each scanner targets a specific ecosystem and data source, giving you overlapping coverage with minimal duplication.
+
+<Note>
+Each dependency scanner checks whether relevant manifest or lock files are present before running. A scanner will not execute—and will produce no findings—if its trigger files are absent from the repository.
+</Note>
+
+## Example finding
+
+All dependency scanners produce findings in this format:
+
+```json
+{
+  "scanner_name": "pip-audit",
+  "title": "Vulnerable dependency: cryptography",
+  "severity": "HIGH",
+  "file_path": "requirements.txt",
+  "line_number": null,
+  "description": "cryptography 38.0.1 is affected by CVE-2023-23931: ...",
+  "remediation": "Update cryptography from 38.0.1 to 39.0.1 or later. Run: pip install --upgrade 'cryptography>=39.0.1'",
+  "cve_id": "CVE-2023-23931"
+}
+```
+
+## Scanners
+
+<AccordionGroup>
+  <Accordion title="pip-audit — Python dependencies">
+    **Data source:** PyPI Advisory Database
+
+    pip-audit checks Python packages declared in your project's dependency files against the PyPI Advisory Database and reports known CVEs with CVSS scores.
+
+    **Trigger files** (checked in priority order):
+
+    1. `requirements.txt`
+    2. `pyproject.toml`
+    3. `setup.py`
+    4. `Pipfile`
+    5. `poetry.lock`
+
+    pip-audit scans the first dependency file it finds (searching recursively, excluding `env/`, `.env/`, and `venv/` directories).
+
+    **Severity mapping**
+
+    pip-audit reports vulnerabilities with CVSS v3 scores. The platform maps these as follows:
+
+    | CVSS score | Platform severity |
+    |---|---|
+    | 7.0 – 10.0 | HIGH |
+    | 4.0 – 6.9 | MEDIUM |
+    | 0.1 – 3.9 | LOW |
+
+    If no CVSS score is available, the severity field from the advisory is used directly (`CRITICAL` → `HIGH`).
+
+    **Remediation output**
+
+    When a fixed version is available, pip-audit provides an upgrade command:
+
+    ```
+    Update requests from 2.25.0 to 2.28.2 or later.
+    Run: pip install --upgrade 'requests>=2.28.2'
+    ```
+
+    When no fix is available, the finding notes that no patched version exists and recommends evaluating an alternative package.
+  </Accordion>
+
+  <Accordion title="npm-audit — Node.js dependencies">
+    **Data source:** npm security advisory registry
+
+    npm-audit runs `npm audit` against the project's Node.js dependency tree and maps known advisories to findings.
+
+    **Trigger files:**
+
+    - `package.json` (required)
+    - `package-lock.json`, `yarn.lock`, or `pnpm-lock.yaml` (used if present)
+
+    If a `package-lock.json` does not exist, npm-audit generates one using `npm install --package-lock-only --ignore-scripts` before scanning, so no packages are downloaded.
+
+    **Severity mapping**
+
+    npm uses its own severity scale. The platform maps it as follows:
+
+    | npm severity | Platform severity |
+    |---|---|
+    | `critical` or `high` | HIGH |
+    | `moderate` | MEDIUM |
+    | `low` | LOW |
+
+    npm-audit supports both the v1 advisory format (older npm versions) and the v2 vulnerability report format (npm 7+).
+
+    **Remediation**
+
+    For directly vulnerable packages, the finding recommends:
+
+    ```
+    Run `npm audit fix` to automatically correct this vulnerability,
+    or manually update `<package-name>`.
+    ```
+  </Accordion>
+
+  <Accordion title="Retire.js — Bundled JavaScript libraries">
+    **Data source:** Retire.js vulnerability database
+
+    Retire.js specializes in detecting outdated, vulnerable JavaScript libraries that have been vendored or bundled directly into a repository—files like `jquery-1.11.3.min.js` or `bootstrap.min.js` that are not managed by npm and would not appear in `package.json`.
+
+    **Trigger files:**
+
+    Any `.js` file outside of `node_modules/`.
+
+    Retire.js is run via `npx retire --jspath <repo_path>`. Node.js and npm must be available on the worker.
+
+    **What it finds**
+
+    Retire.js inspects `.js` file contents and filenames to identify the library and version, then checks against its database of known CVEs. Each finding includes:
+
+    - The component name and version (e.g. `jquery 1.11.3`)
+    - A CVE identifier where available
+    - A link to the vulnerability advisory
+
+    **Example finding**
+
+    ```json
+    {
+      "scanner_name": "retire.js",
+      "title": "jquery vulnerability: XSS vulnerability in jQuery ...",
+      "severity": "MEDIUM",
+      "file_path": "static/js/jquery-1.11.3.min.js",
+      "line_number": null,
+      "description": "jquery 1.11.3 has a known vulnerability: XSS vulnerability in jQuery. More info: https://github.com/advisories/GHSA-...",
+      "remediation": "Update the bundled jquery library (static/js/jquery-1.11.3.min.js) to a secure version.",
+      "cve_id": "CVE-2015-9251"
+    }
+    ```
+
+    **Severity mapping**
+
+    Retire.js reports `low`, `medium`, `high`, and `critical`. The platform normalizes `critical` to `HIGH` and passes `high`, `medium`, and `low` through directly (uppercased).
+  </Accordion>
+
+  <Accordion title="OSV Scanner — Multi-ecosystem dependencies">
+    **Data source:** OSV.dev (Google Open Source Vulnerability database)
+
+    OSV Scanner is a multi-ecosystem tool from Google that scans lock files and manifest files against the [OSV.dev](https://osv.dev) database, which aggregates vulnerability data from GitHub Advisory Database, PyPI, npm, crates.io, Go module proxy, and more.
+
+    **Trigger files:**
+
+    | File | Ecosystem |
+    |---|---|
+    | `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml` | Node.js |
+    | `go.mod` | Go |
+    | `Cargo.lock` | Rust |
+    | `composer.lock` | PHP |
+    | `gemfile.lock` | Ruby |
+    | `mix.lock` | Elixir |
+    | `pom.xml`, `build.gradle`, `build.gradle.kts`, `gradle.lockfile` | Java/JVM |
+
+    OSV Scanner scans the entire repository recursively (`-r`) and picks up all supported lock files in a single run.
+
+    **Example finding**
+
+    ```json
+    {
+      "scanner_name": "osv-scanner",
+      "title": "Vulnerable Go dependency: golang.org/x/net",
+      "severity": "HIGH",
+      "file_path": "go.mod",
+      "line_number": null,
+      "description": "An attacker can cause excessive memory growth in a Go server accepting HTTP/2 requests.",
+      "remediation": "Update golang.org/x/net to a version without GHSA-4374-p667-p6c8.",
+      "cve_id": "CVE-2022-41717"
+    }
+    ```
+
+    The `cve_id` field contains the CVE alias when available; otherwise it contains the OSV vulnerability ID (e.g. `GHSA-xxxx-xxxx-xxxx`).
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,117 @@
+---
+title: "Get Finding"
+description: "GET /api/v1/findings/{finding_id} — Retrieve details of a specific finding including its PR URL."
+---
+
+## Overview
+
+Returns the full detail record for a single finding. Useful for fetching the `pr_url` after resolution, inspecting `remediation` guidance, or checking the `confidence` and `cve_id` fields returned by the scanner.
+
+## Endpoint
+
+```
+GET /api/v1/findings/{finding_id}
+```
+
+## Authentication
+
+Required. Pass either a JWT token in the `Authorization` header or an API key in the `x-api-key` header.
+
+## Path Parameters
+
+<ParamField path="finding_id" type="string (UUID)" required>
+  The UUID of the finding to retrieve. The finding must belong to the authenticated user.
+</ParamField>
+
+## Response
+
+### 200 OK
+
+<ResponseField name="id" type="string (UUID)" required>
+  Unique identifier for the finding.
+</ResponseField>
+
+<ResponseField name="scan_id" type="string (UUID)" required>
+  Identifier of the scan that produced this finding.
+</ResponseField>
+
+<ResponseField name="title" type="string" required>
+  Short title describing the vulnerability type (e.g., `"Use of MD5"`).
+</ResponseField>
+
+<ResponseField name="severity" type="string" required>
+  Severity level assigned by the scanner. Possible values: `critical`, `high`, `medium`, `low`, `info`.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Full description of the vulnerability, including context from the scanner.
+</ResponseField>
+
+<ResponseField name="remediation" type="string">
+  Suggested fix or remediation steps for this vulnerability.
+</ResponseField>
+
+<ResponseField name="scanner_name" type="string">
+  Name of the scanner that detected the issue (e.g., `bandit`, `semgrep`, `checkov`, `pip-audit`).
+</ResponseField>
+
+<ResponseField name="file_path" type="string">
+  Relative file path where the vulnerability was found.
+</ResponseField>
+
+<ResponseField name="line_number" type="integer">
+  Line number within the file where the issue occurs.
+</ResponseField>
+
+<ResponseField name="cve_id" type="string">
+  Associated CVE identifier, if applicable (e.g., `"CVE-2021-44228"`).
+</ResponseField>
+
+<ResponseField name="confidence" type="string">
+  Scanner confidence level for this finding (e.g., `"HIGH"`, `"MEDIUM"`, `"LOW"`).
+</ResponseField>
+
+<ResponseField name="is_fixed" type="boolean" required>
+  Whether this finding has been resolved. `true` after a successful resolution.
+</ResponseField>
+
+<ResponseField name="pr_url" type="string">
+  URL of the pull request created to fix this finding. Set to `"local-fix-applied"` for local scans. `null` if not yet resolved.
+</ResponseField>
+
+### 404 Not Found
+
+```json
+{
+  "detail": "Finding not found"
+}
+```
+
+Returned when no finding with the given ID exists for the authenticated user.
+
+## Example
+
+```bash
+curl https://code-security-platform.onrender.com/api/v1/findings/3fa85f64-5717-4562-b3fc-2c963f66afa6 \
+  -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+### Example Response
+
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "scan_id": "1c8e9b2a-3d44-4f00-b1ea-abc123456789",
+  "title": "Use of MD5",
+  "severity": "medium",
+  "description": "Use of weak MD5 hash function detected. MD5 is cryptographically broken and should not be used for security-sensitive operations.",
+  "remediation": "Replace MD5 with SHA-256 or another secure hashing algorithm from the hashlib library.",
+  "scanner_name": "bandit",
+  "file_path": "src/utils/crypto.py",
+  "line_number": 18,
+  "cve_id": null,
+  "confidence": "HIGH",
+  "is_fixed": false,
+  "pr_url": null
+}
+```

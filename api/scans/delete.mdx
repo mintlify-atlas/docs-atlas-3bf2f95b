@@ -1,0 +1,81 @@
+---
+title: "Delete Scan"
+description: "DELETE /api/v1/scans/{scan_id} — Remove a scan that is currently queued."
+---
+
+## Endpoint
+
+```
+DELETE https://code-security-platform.onrender.com/api/v1/scans/{scan_id}
+```
+
+Authentication required.
+
+<Warning>
+  Only scans with a `status` of `"queued"` can be deleted. Scans that are already `running`, `completed`, or `failed` cannot be removed.
+</Warning>
+
+## Path parameters
+
+<ParamField path="scan_id" type="string" required>
+  The UUID of the scan to delete.
+</ParamField>
+
+## Response
+
+### 200 — Scan deleted
+
+<ResponseField name="status" type="string" required>
+  Always `"success"`.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  A message confirming the scan was removed from the queue.
+</ResponseField>
+
+### 400 — Scan is not queued
+
+Returned when the scan exists but its status is not `"queued"`.
+
+### 403 — Forbidden
+
+Returned when the scan belongs to a different user.
+
+### 404 — Not found
+
+Returned when no scan exists with the given `scan_id`.
+
+## Example
+
+<RequestExample>
+
+```bash cURL
+curl --request DELETE \
+  --url https://code-security-platform.onrender.com/api/v1/scans/3fa85f64-5717-4562-b3fc-2c963f66afa6 \
+  --header 'Authorization: Bearer <JWT_TOKEN>'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "status": "success",
+  "message": "Scan 3fa85f64-5717-4562-b3fc-2c963f66afa6 removed from queue"
+}
+```
+
+```json 400
+{
+  "detail": "Only queued scans can be removed"
+}
+```
+
+```json 404
+{
+  "detail": "Scan not found"
+}
+```
+
+</ResponseExample>

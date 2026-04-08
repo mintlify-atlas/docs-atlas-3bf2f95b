@@ -1,0 +1,68 @@
+---
+title: "CLI Installation"
+description: "Install scp-cli on your machine using curl, pip, or uv to scan repositories from your terminal."
+---
+
+`scp-cli` is the command-line interface for the Code Security Platform. It lets you trigger scans, review findings, resolve vulnerabilities, and integrate security checks into your CI/CD pipeline — all from your terminal.
+
+<Note>
+  `scp-cli` requires **Python 3.8 or later**. Verify your version with `python3 --version` before installing.
+</Note>
+
+## Install scp-cli
+
+<CodeGroup>
+
+```bash curl (recommended)
+curl -sSL https://raw.githubusercontent.com/maxwellsarpong/Code-Security-platform/main/install.sh | bash
+```
+
+```bash pip
+pip install scp-cli --upgrade
+```
+
+```bash uv
+uv tool install scp-cli
+```
+
+</CodeGroup>
+
+The curl installer sets up an isolated virtual environment under `~/.scp-cli/`, creates a wrapper script, and adds it to your `PATH` automatically. After installation, restart your terminal or source your shell config file.
+
+## Verify the installation
+
+```bash
+scp-cli --help
+```
+
+You should see the help menu listing all available commands.
+
+## Authenticate
+
+All commands require an API key. Obtain one from your dashboard, then run:
+
+```bash
+scp-cli auth --key <YOUR_API_KEY>
+```
+
+To point the CLI at a self-hosted or custom API instance, pass the `--url` flag:
+
+```bash
+scp-cli auth --key <YOUR_API_KEY> --url https://your-instance.example.com
+```
+
+Your credentials are stored locally at `~/.scp/config.json`. The file contains your API key and the configured API URL.
+
+<Note>
+  Keep `~/.scp/config.json` private. It holds your API key in plain text. Do not commit it to version control.
+</Note>
+
+## Next steps
+
+After authenticating, run your first scan:
+
+```bash
+scp-cli scan https://github.com/owner/repo
+```
+
+See [CLI Commands](/cli/commands) for the full command reference.

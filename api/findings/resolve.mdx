@@ -1,0 +1,130 @@
+---
+title: "Resolve Finding"
+description: "POST /api/v1/findings/{target_id}/resolve — Automatically fix a vulnerability and create a pull request."
+---
+
+## Overview
+
+Triggers the automated resolution service for a vulnerability. The service analyzes the finding, generates a code fix using AI, and submits a pull request to the repository.
+
+`target_id` is flexible:
+
+- **Finding ID** — resolves that single vulnerability.
+- **Scan ID** — resolves all findings within that scan in one call.
+
+This endpoint is **quota-enforced**: each successful resolution consumes 1 resolution credit from your monthly allowance.
+
+## Endpoint
+
+```
+POST /api/v1/findings/{target_id}/resolve
+```
+
+## Authentication
+
+Required. Pass either a JWT token in the `Authorization` header or an API key in the `x-api-key` header.
+
+## Path Parameters
+
+<ParamField path="target_id" type="string (UUID)" required>
+  Either a **Finding ID** to fix one vulnerability, or a **Scan ID** to fix all findings in that scan.
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="force_sync" type="boolean" default="false">
+  When `true`, the request blocks until the resolution job completes and returns the result directly. When `false` (default), the job is enqueued and the response is returned immediately with a pending status.
+</ParamField>
+
+## Request Body
+
+<ParamField body="github_token" type="string">
+  A GitHub personal access token used to create the pull request. If omitted, the token stored in your user profile (`github_token`) is used instead.
+</ParamField>
+
+## Response
+
+### 200 OK
+
+<ResponseField name="status" type="string" required>
+  Resolution status. One of `"success"`, `"pending"`, or `"failed"`.
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  Human-readable description of the outcome.
+</ResponseField>
+
+<ResponseField name="pr_url" type="string">
+  URL of the pull request created on GitHub. For local scans (no remote repository), this is set to `"local-fix-applied"`.
+</ResponseField>
+
+<ResponseField name="finding_id" type="string (UUID)" required>
+  The ID of the finding that was resolved.
+</ResponseField>
+
+<ResponseField name="fixes" type="array">
+  Present only for **local scans**. An array of file patch objects, each containing:
+  - `file_path` (string) — path to the patched file.
+  - `new_content` (string) — the full updated file content after applying the fix.
+</ResponseField>
+
+### 403 Forbidden
+
+```json
+{
+  "detail": "Resolution quota exceeded. Upgrade your plan to continue."
+}
+```
+
+Returned when the monthly resolution quota has been reached.
+
+### 404 Not Found
+
+```json
+{
+  "detail": "Resource not found. ID <id> does not match any Finding or Scan associated with your user."
+}
+```
+
+## Example
+
+```bash
+curl -X POST \
+  "https://code-security-platform.onrender.com/api/v1/findings/3fa85f64-5717-4562-b3fc-2c963f66afa6/resolve?force_sync=true" \
+  -H "Authorization: Bearer <JWT_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{ "github_token": "ghp_yourPersonalAccessToken" }'
+```
+
+### Example Response
+
+```json
+{
+  "status": "success",
+  "message": "Finding resolved and pull request created.",
+  "pr_url": "https://github.com/owner/repo/pull/12",
+  "finding_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "fixes": null
+}
+```
+
+### Local Scan Example Response
+
+```json
+{
+  "status": "success",
+  "message": "Local fix applied. No remote repository to push to.",
+  "pr_url": "local-fix-applied",
+  "finding_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "fixes": [
+    {
+      "file_path": "src/utils/crypto.py",
+      "new_content": "import hashlib\n\ndef hash_value(val: str) -> str:\n    return hashlib.sha256(val.encode()).hexdigest()\n"
+    }
+  ]
+}
+```
+
+<Note>
+  You can provide `github_token` in the request body to use a token for this request only. To avoid passing it on every call, store it once by updating your profile via `PUT /api/v1/user/profile` with `"github_token": "ghp_..."`. The resolution service will then read it automatically.
+</Note>

@@ -1,0 +1,156 @@
+{
+  "projectType": "saas",
+  "projectName": "Code Security Platform",
+  "projectDescription": "A cloud-based security vulnerability scanner that analyzes code repositories using multiple industry-standard scanners and automatically generates fixes via pull requests.",
+  "theme": "aspen",
+  "primaryColor": "#1E3A5F",
+  "lightColor": "#3B82F6",
+  "darkColor": "#0F172A",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Security Scanners",
+            "pages": [
+              "scanners/overview",
+              "scanners/semgrep",
+              "scanners/bandit",
+              "scanners/checkov",
+              "scanners/dependency-scanning"
+            ]
+          },
+          {
+            "group": "CLI Tool",
+            "pages": [
+              "cli/installation",
+              "cli/commands",
+              "cli/cicd-integration"
+            ]
+          },
+          {
+            "group": "Plans & Billing",
+            "pages": [
+              "billing/plans",
+              "billing/usage-quotas"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/docker",
+              "deployment/configuration",
+              "deployment/observability"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth/register",
+              "api/auth/login",
+              "api/auth/password-recovery"
+            ]
+          },
+          {
+            "group": "Scans",
+            "pages": [
+              "api/scans/create",
+              "api/scans/list",
+              "api/scans/get",
+              "api/scans/delete"
+            ]
+          },
+          {
+            "group": "Findings & Resolution",
+            "pages": [
+              "api/findings/list-fixed",
+              "api/findings/get",
+              "api/findings/resolve"
+            ]
+          },
+          {
+            "group": "User & Account",
+            "pages": [
+              "api/user/profile",
+              "api/user/api-keys",
+              "api/user/subscription"
+            ]
+          },
+          {
+            "group": "Admin",
+            "pages": [
+              "api/admin/users",
+              "api/admin/platform-stats"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Multi-scanner security analysis using Semgrep, Bandit, Checkov, pip-audit, npm-audit, Retire.js, and OSV",
+    "Automated fix generation with pull request creation via GitHub integration",
+    "Local workspace scanning with automatic zip upload from the CLI",
+    "CI/CD integration with severity-threshold gating and non-zero exit codes",
+    "Tiered subscription plans (Free, Team, Enterprise) with monthly quotas",
+    "Background scan processing via Redis/RQ worker queue with Prometheus metrics",
+    "JWT and API key authentication with Slack, Jira, and Git integrations",
+    "Risk score calculation (0-10 scale) based on aggregated finding severities"
+  ],
+  "publicApiSurface": [
+    "POST /api/v1/auth/register",
+    "POST /api/v1/auth/login",
+    "POST /api/v1/auth/token",
+    "POST /api/v1/auth/request-password-recovery",
+    "POST /api/v1/auth/reset-password",
+    "GET /api/v1/user/profile",
+    "PUT /api/v1/user/profile",
+    "GET /api/v1/user/usage",
+    "GET /api/v1/user/api-keys",
+    "POST /api/v1/user/api-key",
+    "POST /api/v1/user/subscription/team",
+    "POST /api/v1/user/subscription/enterprise",
+    "POST /api/v1/user/subscription/renew",
+    "POST /api/v1/scans",
+    "POST /api/v1/scans/local",
+    "GET /api/v1/scans",
+    "GET /api/v1/scans/{scan_id}",
+    "DELETE /api/v1/scans/{scan_id}",
+    "POST /api/v1/findings/{target_id}/resolve",
+    "GET /api/v1/findings/fixed",
+    "GET /api/v1/findings/{finding_id}",
+    "GET /api/v1/admin/users",
+    "PUT /api/v1/admin/users/{user_id}",
+    "GET /api/v1/admin/scans",
+    "GET /api/v1/admin/findings/fixed",
+    "GET /api/v1/admin/health/stats",
+    "GET /api/v1/admin/events",
+    "POST /api/v1/admin/scans/requeue",
+    "GET /api/v1/metrics",
+    "GET /health",
+    "scp-cli auth --key <API_KEY>",
+    "scp-cli scan <repo_url|local_path>",
+    "scp-cli status <scan_id>",
+    "scp-cli findings <scan_id>",
+    "scp-cli check <scan_id> --severity HIGH --fail",
+    "scp-cli resolve <id>",
+    "scp-cli resolved",
+    "scp-cli pr <finding_id>",
+    "scp-cli usage",
+    "scp-cli whoami"
+  ]
+}

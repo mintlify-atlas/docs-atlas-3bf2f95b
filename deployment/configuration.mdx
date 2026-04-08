@@ -1,0 +1,106 @@
+---
+title: "Configuration"
+description: "Configure your account integrations — GitHub token, Slack webhooks, and Jira for automated fix workflows."
+---
+
+User-level integration settings are stored on your profile and used automatically by the platform when running scans and resolutions. You can update them at any time via the API.
+
+## Updating your profile
+
+All integration fields are set with a single `PUT` request:
+
+```bash
+curl -X PUT https://code-security-platform.onrender.com/api/v1/user/profile \
+     -H "Authorization: Bearer <JWT_TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "github_token": "ghp_...",
+       "slack_webhook_url": "https://hooks.slack.com/services/...",
+       "jira_url": "https://yourorg.atlassian.net",
+       "jira_email": "you@yourorg.com",
+       "jira_api_token": "<JIRA_API_TOKEN>",
+       "jira_project_key": "SEC"
+     }'
+```
+
+All fields are optional and independently updatable — omit any field you do not want to change.
+
+<Note>
+  GitHub, GitLab, and Bitbucket tokens stored in your profile are never returned in API responses. Treat them as sensitive credentials and use tokens with the minimum required scopes.
+</Note>
+
+## GitHub token
+
+A GitHub personal access token is required to open automated pull requests on private repositories when resolving findings.
+
+**Required scopes:** `repo` (for private repositories) or `public_repo` (for public repositories).
+
+You can provide the token in two ways:
+
+<Tabs>
+  <Tab title="Profile (persistent)">
+    Store the token on your profile so it is used automatically for all resolutions:
+
+    ```bash
+    curl -X PUT https://code-security-platform.onrender.com/api/v1/user/profile \
+         -H "Authorization: Bearer <JWT_TOKEN>" \
+         -H "Content-Type: application/json" \
+         -d '{ "github_token": "ghp_..." }'
+    ```
+  </Tab>
+  <Tab title="Per-request">
+    Pass the token directly in the resolve call body to override your stored token for that request:
+
+    ```bash
+    curl -X POST "https://code-security-platform.onrender.com/api/v1/findings/<ID>/resolve" \
+         -H "Authorization: Bearer <JWT_TOKEN>" \
+         -H "Content-Type: application/json" \
+         -d '{ "github_token": "ghp_..." }'
+    ```
+
+    The same `--token` flag is available in the CLI:
+
+    ```bash
+    scp-cli resolve <scan_id> --token ghp_...
+    scp-cli scan https://github.com/owner/repo --token ghp_...
+    ```
+  </Tab>
+</Tabs>
+
+GitLab (`gitlab_token`) and Bitbucket (`bitbucket_token`) tokens follow the same pattern.
+
+## Slack webhook
+
+Set `slack_webhook_url` on your profile to receive scan and resolution notifications in a Slack channel.
+
+Create an incoming webhook in your Slack workspace and pass the URL to the profile update endpoint:
+
+```bash
+curl -X PUT https://code-security-platform.onrender.com/api/v1/user/profile \
+     -H "Authorization: Bearer <JWT_TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d '{ "slack_webhook_url": "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXX" }'
+```
+
+## Jira integration
+
+When Jira is configured, the platform can create issues for findings as part of the resolution workflow. Set all four fields together:
+
+| Field | Description |
+|---|---|
+| `jira_url` | Base URL of your Jira instance, e.g. `https://yourorg.atlassian.net` |
+| `jira_email` | Email address associated with your Jira account |
+| `jira_api_token` | Jira API token generated from your Atlassian account settings |
+| `jira_project_key` | Key of the project where issues will be created, e.g. `SEC` |
+
+```bash
+curl -X PUT https://code-security-platform.onrender.com/api/v1/user/profile \
+     -H "Authorization: Bearer <JWT_TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "jira_url": "https://yourorg.atlassian.net",
+       "jira_email": "you@yourorg.com",
+       "jira_api_token": "<JIRA_API_TOKEN>",
+       "jira_project_key": "SEC"
+     }'
+```

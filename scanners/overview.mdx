@@ -1,0 +1,88 @@
+---
+title: "Scanners Overview"
+description: "Seven security scanners run in parallel to give you comprehensive vulnerability coverage across languages, frameworks, and infrastructure."
+---
+
+When you submit a repository for scanning, the platform clones the code into an isolated temporary directory and dispatches all applicable scanners concurrently using a thread pool. Results from every scanner are aggregated into a unified findings list, a risk score is calculated, and the temporary clone is deleted. No scanner blocks another—each runs independently so the total scan time is bounded by the slowest applicable scanner, not their sum.
+
+## Scanners
+
+| Scanner | What it scans | Languages / formats |
+|---|---|---|
+| **Semgrep** | Static code analysis | Python, JS, TS, Java, Go, Ruby, PHP, C/C++, C#, Rust, Kotlin, Scala, Swift, YAML, JSON, Terraform, Dockerfile |
+| **Bandit** | Python static security analysis | Python |
+| **Checkov** | Infrastructure as Code | Terraform, Dockerfile, Kubernetes, CloudFormation |
+| **pip-audit** | Python dependency vulnerabilities | `requirements.txt`, `pyproject.toml`, `setup.py`, `Pipfile`, `poetry.lock` |
+| **npm-audit** | Node.js dependency vulnerabilities | `package.json`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml` |
+| **Retire.js** | Bundled JavaScript library vulnerabilities | `.js` files (e.g. vendored jQuery) |
+| **OSV Scanner** | Multi-ecosystem dependency vulnerabilities | `go.mod`, `Cargo.lock`, `composer.lock`, `gemfile.lock`, `pom.xml`, Gradle lock files, and Node.js lock files |
+
+## How scanning works
+
+<Steps>
+  <Step title="Clone">
+    The repository is cloned into a temporary directory on the worker. Private repositories require a GitHub, GitLab, or Bitbucket token. Local workspaces are uploaded as a zip archive.
+  </Step>
+  <Step title="Scan in parallel">
+    Each scanner checks whether it is applicable to the repository (e.g. Bandit only runs when `.py` files are present). All applicable scanners run concurrently via a thread pool. Parallelism is controlled by the `SCAN_PARALLELISM` environment variable (default: `2`).
+  </Step>
+  <Step title="Aggregate findings">
+    Findings from every scanner are collected and written to the database incrementally. Each finding records the scanner name, file path, line number, severity, description, and remediation.
+  </Step>
+  <Step title="Calculate risk score">
+    A risk score between `0.0` and `10.0` is derived from the aggregated findings. See [Risk score](#risk-score) below.
+  </Step>
+  <Step title="Clean up">
+    The temporary clone is deleted. For local workspace scans, the stored zip archive is pruned from the database after a 2-hour retention window.
+  </Step>
+</Steps>
+
+## Risk score
+
+Each scan produces a numeric risk score on a **0–10 scale**. The score is computed by summing the severity weights of all findings, then normalizing against a baseline of 10 HIGH-severity findings (100 points).
+
+| Severity | Weight |
+|---|---|
+| HIGH | 10 |
+| MEDIUM | 5 |
+| LOW | 1 |
+
+```
+total_score  = Σ weight(finding.severity)
+risk_score   = min(10.0, (total_score / 100.0) × 10.0)
+```
+
+A repository with no findings scores `0.0`. A repository with 10 or more HIGH findings scores `10.0`.
+
+## Finding fields
+
+Every finding returned by any scanner contains the following fields:
+
+| Field | Description |
+|---|---|
+| `scanner_name` | Which scanner produced this finding |
+| `title` | Short human-readable label |
+| `severity` | `HIGH`, `MEDIUM`, or `LOW` |
+| `file_path` | Path to the affected file, relative to the repository root |
+| `line_number` | Line number of the issue (where available) |
+| `description` | Full description of the security issue |
+| `remediation` | Suggested fix or upgrade command |
+| `cve_id` | CVE or CWE identifier (where available) |
+| `confidence` | Scanner confidence level (where provided) |
+
+## Scanner pages
+
+<CardGroup cols={2}>
+  <Card title="Semgrep" icon="code" href="/scanners/semgrep">
+    Multi-language static analysis covering OWASP Top 10 and CWE.
+  </Card>
+  <Card title="Bandit" icon="snake" href="/scanners/bandit">
+    Python static security analysis with 68+ built-in checks.
+  </Card>
+  <Card title="Checkov" icon="cloud" href="/scanners/checkov">
+    Infrastructure as Code scanning for Terraform, Docker, Kubernetes, and CloudFormation.
+  </Card>
+  <Card title="Dependency scanning" icon="box" href="/scanners/dependency-scanning">
+    CVE detection across Python, Node.js, JavaScript, Go, and Rust dependencies.
+  </Card>
+</CardGroup>

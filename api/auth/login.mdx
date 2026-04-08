@@ -1,0 +1,103 @@
+---
+title: "Login"
+description: "POST /api/v1/auth/login — Log in and receive a JWT access token."
+---
+
+## Endpoints
+
+| Method | Endpoint | Format |
+|--------|----------|--------|
+| `POST` | `/api/v1/auth/login` | JSON body |
+| `POST` | `/api/v1/auth/token` | OAuth2 form data |
+
+No authentication required.
+
+<Info>
+  Use the JWT `access_token` from the response in the `Authorization: Bearer <token>` header for all protected endpoints.
+</Info>
+
+## JSON login — POST /api/v1/auth/login
+
+### Request body
+
+<ParamField body="email" type="string" required>
+  The email address of the account.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The account password.
+</ParamField>
+
+## OAuth2 form login — POST /api/v1/auth/token
+
+Accepts standard OAuth2 `application/x-www-form-urlencoded` form data with `username` (email) and `password` fields. Returns the same token response.
+
+## Response
+
+### 200 — Success
+
+<ResponseField name="access_token" type="string" required>
+  JWT token for authenticating subsequent requests.
+</ResponseField>
+
+<ResponseField name="token_type" type="string" required>
+  Always `"bearer"`.
+</ResponseField>
+
+### 404 — Authentication failed
+
+Returned when the email is not found or the password is incorrect. The API returns the same status code for both cases to prevent email enumeration.
+
+```json
+{
+  "detail": "Incorrect email or password"
+}
+```
+
+## Using the token
+
+Include the `access_token` in the `Authorization` header of subsequent requests:
+
+```
+Authorization: Bearer <access_token>
+```
+
+## Example
+
+<RequestExample>
+
+```bash JSON login
+curl --request POST \
+  --url https://code-security-platform.onrender.com/api/v1/auth/login \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "email": "user@example.com",
+    "password": "yourpassword"
+  }'
+```
+
+```bash OAuth2 form login
+curl --request POST \
+  --url https://code-security-platform.onrender.com/api/v1/auth/token \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --data 'username=user@example.com&password=yourpassword'
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer"
+}
+```
+
+```json 404
+{
+  "detail": "Incorrect email or password"
+}
+```
+
+</ResponseExample>

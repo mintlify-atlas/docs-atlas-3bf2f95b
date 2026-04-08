@@ -1,0 +1,61 @@
+---
+title: "Plans"
+description: "Choose the right plan for your team — from the free tier to enterprise-scale scanning."
+---
+
+Every account is assigned a plan that controls monthly scan and resolution limits. All plans share the same scanner capabilities — only the quota limits differ.
+
+## Plan comparison
+
+| Plan | Monthly scans | Monthly resolutions |
+|---|---|---|
+| `starter` | 2 | 2 |
+| `team` | 500 | 500 |
+| `enterprise` | 2,000 | 2,000 |
+
+New users are automatically placed on the **Starter** plan. No credit card is required to get started.
+
+<Tip>
+  Check your current plan and quota limits at any time with `GET /api/v1/user/profile`.
+
+  ```bash
+  curl https://code-security-platform.onrender.com/api/v1/user/profile \
+       -H "Authorization: Bearer <JWT_TOKEN>"
+  ```
+</Tip>
+
+## Upgrading your plan
+
+Use the subscription endpoints below to move to a higher tier. Upgrading is additive — your new plan quota is added on top of any remaining quota from your current billing period, and your monthly counters are reset.
+
+### Upgrade to Team
+
+```bash
+curl -X POST https://code-security-platform.onrender.com/api/v1/user/subscription/team \
+     -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+```json Response
+{
+  "status": "success",
+  "message": "User user@example.com successfully subscribed to TEAM plan."
+}
+```
+
+### Upgrade to Enterprise
+
+```bash
+curl -X POST https://code-security-platform.onrender.com/api/v1/user/subscription/enterprise \
+     -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+```json Response
+{
+  "status": "success",
+  "message": "User user@example.com successfully subscribed to ENTERPRISE plan."
+}
+```
+
+<Note>
+  Downgrades are not supported through the API. Contact support to move to a lower tier.
+</Note>

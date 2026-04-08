@@ -1,0 +1,113 @@
+---
+title: "Authentication"
+description: "Use JWT tokens or API keys to authenticate all requests to the Code Security Platform API."
+---
+
+All protected endpoints require authentication. The platform supports two methods:
+
+| Method | Header | Value |
+|---|---|---|
+| JWT token | `Authorization` | `Bearer <token>` |
+| API key | `x-api-key` | `<key>` |
+
+Both methods grant the same access level. Use JWT tokens for interactive sessions and API keys for automated scripts or CI/CD pipelines.
+
+## JWT token
+
+JWT tokens are obtained by registering or logging in. Tokens are valid for **7 days**.
+
+<Tabs>
+  <Tab title="Register">
+    Registration creates your account and immediately returns a JWT token.
+
+    ```bash
+    curl -X POST https://code-security-platform.onrender.com/api/v1/auth/register \
+         -H "Content-Type: application/json" \
+         -d '{ "email": "you@example.com", "password": "yourpassword" }'
+    ```
+
+    ```json
+    {
+      "access_token": "<JWT_TOKEN>",
+      "token_type": "bearer",
+      "user": { "id": "...", "email": "you@example.com", "created_at": "..." }
+    }
+    ```
+  </Tab>
+  <Tab title="Log in">
+    If you already have an account, exchange your credentials for a token.
+
+    ```bash
+    curl -X POST https://code-security-platform.onrender.com/api/v1/auth/login \
+         -H "Content-Type: application/json" \
+         -d '{ "email": "you@example.com", "password": "yourpassword" }'
+    ```
+
+    ```json
+    {
+      "access_token": "<JWT_TOKEN>",
+      "token_type": "bearer"
+    }
+    ```
+
+    **Error codes**
+
+    | Status | Cause |
+    |---|---|
+    | `404` | Email not found or password incorrect (same response for both to prevent enumeration) |
+  </Tab>
+</Tabs>
+
+Pass the token in the `Authorization` header on every subsequent request:
+
+```bash
+curl https://code-security-platform.onrender.com/api/v1/scans \
+     -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+## API key
+
+API keys do not expire and are better suited for long-running integrations. Your first key is generated automatically when you register.
+
+### Generate a new key
+
+```bash
+curl -X POST https://code-security-platform.onrender.com/api/v1/user/api-key \
+     -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+<Warning>
+  The API key is returned only once in the response. Store it in a secrets manager or environment variable immediately — you cannot retrieve it again.
+</Warning>
+
+### Use the key in requests
+
+Pass the key in the `x-api-key` header:
+
+```bash
+curl https://code-security-platform.onrender.com/api/v1/scans \
+     -H "x-api-key: <YOUR_API_KEY>"
+```
+
+### List existing keys
+
+```bash
+curl https://code-security-platform.onrender.com/api/v1/user/api-keys \
+     -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
+## Using the CLI
+
+<Note>
+  `scp-cli` stores your API key locally so you don't need to pass it on every command.
+</Note>
+
+```bash
+# Install
+pip install scp-cli
+
+# Store your key — this saves it to your local config
+scp-cli auth --key <YOUR_API_KEY>
+```
+
+After running `scp-cli auth --key`, all subsequent CLI commands authenticate automatically using the stored key.

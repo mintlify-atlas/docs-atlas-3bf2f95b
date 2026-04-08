@@ -1,0 +1,292 @@
+---
+title: "Admin: Platform Stats"
+description: "Superuser endpoints for platform-wide health, scan history, and event logs."
+---
+
+## Overview
+
+These endpoints give superusers a full view of platform activity: all scans across every user, all resolved findings, system health metrics, and a paginated event log. A maintenance endpoint is also available to rescue scans stuck in the queue.
+
+<Warning>
+  All endpoints in this section require a **superuser JWT token**. Requests from non-superuser accounts will be rejected with `403 Forbidden`.
+</Warning>
+
+---
+
+## GET /api/v1/admin/scans
+
+Returns all security scans submitted by every user on the platform, ordered by creation date (newest first).
+
+### Authentication
+
+Required. Superuser JWT token in the `Authorization: Bearer` header.
+
+### Response
+
+#### 200 OK
+
+Returns an array of scan objects. Each object includes the scan's status, risk score, associated findings, and metadata.
+
+### Example
+
+```bash
+curl https://code-security-platform.onrender.com/api/v1/admin/scans \
+  -H "Authorization: Bearer <SUPERUSER_JWT>"
+```
+
+```json
+[
+  {
+    "id": "1c8e9b2a-3d44-4f00-b1ea-abc123456789",
+    "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "repo_url": "https://github.com/owner/repo",
+    "is_local": false,
+    "status": "completed",
+    "created_at": "2024-03-01T08:00:00Z",
+    "completed_at": "2024-03-01T08:02:30Z",
+    "risk_score": 6.4,
+    "findings": []
+  }
+]
+```
+
+---
+
+## GET /api/v1/admin/findings/fixed
+
+Returns all fixed findings across every user on the platform, ordered by ID (newest first).
+
+### Authentication
+
+Required. Superuser JWT token in the `Authorization: Bearer` header.
+
+### Response
+
+#### 200 OK
+
+Returns an array of finding objects where `is_fixed` is `true`. See [Get Finding](/api/findings/get) for the full field reference.
+
+### Example
+
+```bash
+curl https://code-security-platform.onrender.com/api/v1/admin/findings/fixed \
+  -H "Authorization: Bearer <SUPERUSER_JWT>"
+```
+
+---
+
+## GET /api/v1/admin/health/stats
+
+Returns a computed system health score along with aggregate counts for scans and findings.
+
+### Authentication
+
+Required. Superuser JWT token in the `Authorization: Bearer` header.
+
+### Response
+
+#### 200 OK
+
+<ResponseField name="system_health_percentage" type="number" required>
+  Computed health score from 0 to 100. Derived from the resolution rate and the inverse of the average risk score across all scans.
+</ResponseField>
+
+<ResponseField name="total_scans" type="integer" required>
+  Total number of scans ever submitted on the platform.
+</ResponseField>
+
+<ResponseField name="total_findings" type="integer" required>
+  Total number of findings detected across all scans.
+</ResponseField>
+
+<ResponseField name="total_fixed_findings" type="integer" required>
+  Total number of findings that have been resolved.
+</ResponseField>
+
+<ResponseField name="average_risk_score" type="number" required>
+  Average risk score (0–10 scale) across all completed scans.
+</ResponseField>
+
+### Example
+
+```bash
+curl https://code-security-platform.onrender.com/api/v1/admin/health/stats \
+  -H "Authorization: Bearer <SUPERUSER_JWT>"
+```
+
+```json
+{
+  "system_health_percentage": 78.45,
+  "total_scans": 142,
+  "total_findings": 893,
+  "total_fixed_findings": 412,
+  "average_risk_score": 4.3
+}
+```
+
+---
+
+## GET /api/v1/admin/events
+
+Returns a paginated list of platform-wide billing and activity events (scans initiated, resolutions performed, plan changes, etc.), ordered by creation time (newest first).
+
+### Authentication
+
+Required. Superuser JWT token in the `Authorization: Bearer` header.
+
+### Query Parameters
+
+<ParamField query="offset" type="integer" default="0">
+  Number of records to skip before returning results. Use for pagination.
+</ParamField>
+
+<ParamField query="limit" type="integer" default="3">
+  Maximum number of events to return. Defaults to `3`.
+</ParamField>
+
+### Response
+
+#### 200 OK
+
+<ResponseField name="id" type="string (UUID)" required>
+  Unique identifier for the event.
+</ResponseField>
+
+<ResponseField name="user_id" type="string (UUID)" required>
+  ID of the user who triggered the event.
+</ResponseField>
+
+<ResponseField name="event_type" type="string" required>
+  Type of event (e.g., `"scan"`, `"resolution"`, `"subscription"`).
+</ResponseField>
+
+<ResponseField name="amount" type="number" required>
+  Quota units consumed or credited by this event.
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Additional event-specific metadata (varies by event type).
+</ResponseField>
+
+<ResponseField name="created_at" type="string (ISO 8601 datetime)" required>
+  Timestamp when the event was recorded.
+</ResponseField>
+
+### Examples
+
+```bash
+# Fetch the 3 most recent events (default)
+curl https://code-security-platform.onrender.com/api/v1/admin/events \
+  -H "Authorization: Bearer <SUPERUSER_JWT>"
+
+# Fetch events 4–8 (custom pagination)
+curl "https://code-security-platform.onrender.com/api/v1/admin/events?offset=3&limit=5" \
+  -H "Authorization: Bearer <SUPERUSER_JWT>"
+```
+
+```json
+[
+  {
+    "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "event_type": "resolution",
+    "amount": 1.0,
+    "meta": { "finding_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6" },
+    "created_at": "2024-03-01T09:15:00Z"
+  }
+]
+```
+
+---
+
+## POST /api/v1/admin/scans/requeue
+
+Re-enqueues all scans currently stuck in `"queued"` status. Use this after resolving a Redis connectivity issue to dispatch scans that were created but never sent to the worker.
+
+### Authentication
+
+Required. Superuser JWT token in the `Authorization: Bearer` header.
+
+### Response
+
+#### 200 OK
+
+<ResponseField name="requeued_count" type="integer" required>
+  Number of scans successfully re-enqueued.
+</ResponseField>
+
+<ResponseField name="failed_count" type="integer" required>
+  Number of scans that could not be re-enqueued due to errors.
+</ResponseField>
+
+<ResponseField name="requeued" type="array">
+  Array of scan ID strings that were successfully dispatched.
+</ResponseField>
+
+<ResponseField name="failed" type="array">
+  Array of objects with `scan_id` and `error` fields for scans that failed to re-enqueue.
+</ResponseField>
+
+### Example
+
+```bash
+curl -X POST https://code-security-platform.onrender.com/api/v1/admin/scans/requeue \
+  -H "Authorization: Bearer <SUPERUSER_JWT>"
+```
+
+```json
+{
+  "requeued_count": 3,
+  "failed_count": 0,
+  "requeued": [
+    "1c8e9b2a-3d44-4f00-b1ea-abc123456789",
+    "2d9fa3bb-4e55-5g11-c2fb-bcd234567890",
+    "3eagb4cc-5f66-6h22-d3gc-cde345678901"
+  ],
+  "failed": []
+}
+```
+
+---
+
+## POST /api/v1/auth/init-superuser
+
+Bootstraps the platform by creating the first superuser account. This endpoint is only effective when no superuser exists yet.
+
+### Authentication
+
+None required — this endpoint is intentionally open to allow initial setup.
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  Email address for the superuser account.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Password for the superuser account.
+</ParamField>
+
+### Response
+
+#### 200 OK
+
+Returns the created user record.
+
+#### 403 Forbidden
+
+```json
+{
+  "detail": "Superuser already exists."
+}
+```
+
+Returned if a superuser account already exists on the platform. Run this endpoint only once during initial deployment.
+
+### Example
+
+```bash
+curl -X POST https://code-security-platform.onrender.com/api/v1/auth/init-superuser \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "admin@example.com", "password": "secureadminpassword" }'
+```

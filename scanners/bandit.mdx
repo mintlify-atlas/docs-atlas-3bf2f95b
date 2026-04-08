@@ -1,0 +1,63 @@
+---
+title: "Bandit"
+description: "Python static security analysis detecting hardcoded secrets, injection flaws, and insecure library usage."
+---
+
+Bandit is a Python-only static analysis tool that walks the abstract syntax tree (AST) of every `.py` file in a repository. It applies over 68 built-in checks to identify common security mistakes before code reaches production.
+
+## What Bandit detects
+
+- **Hardcoded secrets** — passwords, tokens, and keys embedded directly in source code
+- **SQL injection** — unsafe string formatting in database queries (B608, B610, B611)
+- **Shell injection** — use of `shell=True` in subprocess calls, `os.system()`, partial executable paths (B602–B607)
+- **Insecure cryptography** — MD5 and SHA1 used for security purposes, weak ciphers and cipher modes, weak key sizes (B303, B304, B305, B324)
+- **Insecure random number generation** — use of `random` instead of `secrets` for security-sensitive values (B311)
+- **Unsafe deserialization** — use of `pickle`, `yaml.load()` without a safe Loader, and similar patterns (B301, B506)
+- **Insecure XML parsing** — use of standard library XML parsers vulnerable to XXE attacks (B313–B320)
+- **Insecure network protocols** — telnet, FTP, unverified SSL/TLS contexts (B309, B323, B501–B504)
+- **Debug mode in production** — Flask `app.run(debug=True)` (B201)
+
+## When Bandit runs
+
+Bandit runs whenever at least one `.py` file is found anywhere in the repository. Virtual environments (`env/`, `.env/`, `venv/`) are excluded from the scan.
+
+## Severity mapping
+
+Bandit reports both a severity level and a confidence level for each finding. The platform combines these two signals into a single severity:
+
+| Bandit severity | Bandit confidence | Platform severity |
+|---|---|---|
+| HIGH | HIGH or MEDIUM | HIGH |
+| HIGH | LOW | MEDIUM |
+| MEDIUM | HIGH | MEDIUM |
+| Any other combination | Any | LOW |
+
+## Finding format
+
+```json
+{
+  "scanner_name": "bandit",
+  "title": "hardcoded_password_string",
+  "severity": "HIGH",
+  "file_path": "src/config/settings.py",
+  "line_number": 17,
+  "description": "Possible hardcoded password: 'supersecret123'",
+  "remediation": "Review and fix the security issue identified by Bandit",
+  "cve_id": null
+}
+```
+
+A finding for an insecure subprocess call would look like:
+
+```json
+{
+  "scanner_name": "bandit",
+  "title": "subprocess_popen_with_shell_equals_true",
+  "severity": "HIGH",
+  "file_path": "src/tasks/runner.py",
+  "line_number": 54,
+  "description": "subprocess call with shell=True identified, security issue.",
+  "remediation": "Avoid using shell=True in subprocess calls",
+  "cve_id": null
+}
+```
